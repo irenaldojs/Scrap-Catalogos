@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Catalogo {
+  id        Int       @id @default(autoincrement())
+  nome      String
+  url       String    @unique
+  produtos  Produto[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Produto {
+  id            Int         @id @default(autoincrement())
+  linha         String?
+  referencia    String?
+  aplicacoes    String?
+
+  Catalogo      Catalogo?   @relation(fields: [catalogoId], references: [id])
+  catalogoId    Int?
+
+  equivalencias Equivalencia[]
+  dados         Dado[]
+  aplicacoesRelacionadas Aplicacao[]
+}
+
+enum TipoDado {
+  LARGURA
+  ALTURA
+  PROFUNDIDADE
+  PESO
+  VOLUME
+  LITRAGEM
+  ESTRIAS
+  FUROS
+  DIAMETRO
+  COMPRIMENTO
+  ESTRIAS_INTERNA
+  ESTRIAS_EXTERNA
+}
+
+model Dado {
+  id        Int      @id @default(autoincrement())
+  tipo      TipoDado
+  valor     String
+  produto   Produto? @relation(fields: [produtoId], references: [id])
+  produtoId Int?
+}
+
+model Aplicacao {
+  id          Int      @id @default(autoincrement())
+  modelo      Modelo? @relation(fields: [modeloId], references: [id])
+  modeloId    Int?
+  ano         String?
+  complemento String?
+  observacao  String?
+  produto     Produto? @relation(fields: [produtoId], references: [id])
+  produtoId   Int?
+}
+
+model Modelo {
+  id    Int    @id @default(autoincrement())
+  nome  String
+  montadora String
+  aplicacoes  Aplicacao[]
+}
+
+model Equivalencia {
+  id        Int      @id @default(autoincrement())
+  marca   String?
+  codigo   String
+
+  produto   Produto? @relation(fields: [produtoId], references: [id])
+  produtoId Int?
+}
