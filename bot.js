@@ -1,21 +1,22 @@
-const fs = require('fs');
-const puppeteer = require('puppeteer');
-const axios = require('axios');
+const fs = require("fs")
+const axios = require("axios")
+const puppeteer = require("puppeteer");
+
 const API_URL = 'http://localhost:3001/ds';
 
 (async () => {
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     page.setDefaultNavigationTimeout(0);
 
-    const request = await GET_LINHA("Válvula de Agulha")
-    const produtos = request.data
-    console.log(produtos.length)
+    const linha = "Sensor de Velocidade (VSS)"
+    const res = await GET_LINHA(linha)
+    const produtos = res.data
+    const passosTotais = produtos.length
 
 
-    for (i = 0; i < produtos.length; i++) {
-        console.log("passo:", i);
-        console.log(produtos[i].link);
+    for (i = 0; i < passosTotais; i++) {
+        console.log(linha, "passo:", String(Number(i+1) + "/"+passosTotais));
 
         await page.goto(produtos[i].link, { waitUntil: 'load' });
         await page.waitForSelector('body > main > article > section.detalhes > div > div:nth-child(2) > div:nth-child(2) > div > div:nth-child(3) > div > div > table > tbody');
@@ -31,11 +32,14 @@ const API_URL = 'http://localhost:3001/ds';
         });
 
         const formataAplicacoes = aplicacoes.map(aplicacao => {
+            let versao = (aplicacao[2] + (aplicacao[3] ? " " + aplicacao[3] : "") + (aplicacao[5] ? " " + aplicacao[5] : "")).replaceAll("-", "");
+            versao = versao == " " ? "" : versao;
+
             return {
                 montadora: aplicacao[0],
                 modelo: aplicacao[1],
-                ano: aplicacao[4].replaceAll(" ", "").replace(">", "/"),
-                versao: aplicacao[2] + " " + aplicacao[3] + (aplicacao[5] ? " " + aplicacao[5] : ""),
+                ano: aplicacao[4].replaceAll(" ", "").replace(">", "/").replaceAll("-", ""),
+                versao
             }
         })
 
@@ -54,6 +58,7 @@ const API_URL = 'http://localhost:3001/ds';
 
         const data = {
             ...produtos[i],
+            //descricao: atributosFormatados[0].split(":")[1],
             equivalentes,
             aplicacoes: formataAplicacoes,
             imagens,
