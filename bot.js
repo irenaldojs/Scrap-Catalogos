@@ -1,61 +1,120 @@
+<<<<<<< HEAD
 import axios from "axios";
 import puppeteer from "puppeteer";
+=======
+const axios = require("axios");
+const { clear } = require("console");
+const puppeteer = require("puppeteer");
+>>>>>>> nafil
 
-const API_URL = 'http://localhost:3001/ds';
+const API_URL = 'http://localhost:3001/arteb';
+const CATALOGO_URL = 'https://www.arteb.com.br/catalogo/';
 
 (async () => {
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     page.setDefaultNavigationTimeout(0);
 
+<<<<<<< HEAD
     const linha = "Diversos"
     const res = await GET_LINHA(linha)
     const produtos = res.data
     const passosTotais = produtos.length
+=======
+    const produtos = []
+    const pageTogal = 27
+>>>>>>> nafil
 
+    for (let i = 1; i < pageTogal; i++) {
+        console.log("passo :", i)
 
+<<<<<<< HEAD
     for (i = 0; i < passosTotais; i++) {
         console.log(linha, "passo:", String(Number(i + 1) + "/" + passosTotais));
+=======
+        await page.goto(CATALOGO_URL + "/page/" + i, { waitUntil: 'load' })
+        const selector = 'ul.products.columns-4 > li';
+        await page.waitForSelector(selector);
+>>>>>>> nafil
 
+        const listaProdutos = await page.evaluate((sel) => {
+            // Retorna a quantidade de itens encontrados.
+            const elementos = document.querySelectorAll(sel);
+
+            // Você também pode extrair informações de cada elemento, como o título do produto.
+            const produtos = Array.from(elementos).map(li => {
+                const titulo = li.querySelector('h2.woocommerce-loop-product__title').innerText.split(' – ');
+                const link = li.querySelector('a.woocommerce-LoopProduct-link').href;
+                const imagemElement = li.querySelector('div.thumbnail_container > img');
+                const imgSrc = imagemElement.getAttribute('data-src') || imagemElement.getAttribute('src');
+                const id = titulo.pop().replace(/^0+/, '');
+                const referencia = titulo.join(" ");
+
+                return { id, referencia, link, image: imgSrc };
+            });
+
+            return produtos;
+
+        }, selector);
+
+        listaProdutos.forEach((produto) => produtos.push(produto));
+    }
+
+    for (let i = 0; i < produtos.length; i++) {
         await page.goto(produtos[i].link, { waitUntil: 'load' });
-        await page.waitForSelector('body > main > article > section.detalhes > div > div:nth-child(2) > div:nth-child(2) > div > div:nth-child(3) > div > div > table > tbody');
+        console.log('item ', produtos[i].id)
+        // talvez esperar por seletor que garante que parte dinamica carregou
+        // ex: await page.waitForSelector('#tab-description');
 
-        const equivalentes = await page.evaluate(() => {
-            return Array.from(document.querySelectorAll('body > main > article > section.detalhes > div > div:nth-child(2) > div:nth-child(2) > div > div:nth-child(3) > div > div > table > tbody > tr'))
-                .map(tr => tr.innerText.trim())
-        });
+        const texts = await page.evaluate(() => {
+            let montadora = document.querySelector('#tab-description > p:nth-child(6)');
+            montadora = montadora ? montadora.innerText.trim() : null;
 
-        const aplicacoes = await page.evaluate(() => {
-            return Array.from(document.querySelectorAll('body > main > article > section.detalhes > div > div:nth-child(2) > div:nth-child(2) > div > div:nth-child(4) > div > div > table > tbody > tr'))
-                .map(tr => tr.innerText.trim().split("\t"))
-        });
+            const linha = document.querySelector('#tab-description > p:nth-child(8)');
 
-        const formataAplicacoes = aplicacoes.map(aplicacao => {
-            let versao = (aplicacao[2] + (aplicacao[3] ? " " + aplicacao[3] : "") + (aplicacao[5] ? " " + aplicacao[5] : "")).replaceAll("-", "");
-            versao = versao == " " ? "" : versao;
+            const atributos = []
+            let lado = document.querySelector('#tab-description > p:nth-child(12)');
+            if (lado && lado.innerText.trim() !== "–") atributos.push(`Lado:${lado.innerText.trim()}`)
+
+            let descricao = document.querySelector('#tab-description > p:nth-child(2)');
+            if (descricao && descricao.innerText.trim() !== "–") atributos.push(`Descrição:${descricao.innerText.trim()}`)
+
+            let atributosAdicionais = Array.from(
+                document.querySelectorAll('table.woocommerce-product-attributes.shop_attributes tr')
+            ).map(tr => {
+                const th = tr.querySelector('th')?.textContent.trim() || '';
+                const td = tr.querySelector('td')?.textContent.trim() || '';
+                return `${th}:${td}`;
+            });
+
+            atributosAdicionais = atributosAdicionais.filter((_, i) => i !== 3 && i !== 4);
+
+            atributos.push(...atributosAdicionais);
+
+            const aplicacoes = [];
+            let aplicacoesText = document.querySelector("#tab-additional_information > table > tbody > tr.woocommerce-product-attributes-item.woocommerce-product-attributes-item--attribute_pa_veiculo > td > p > a")
+            aplicacoesText = aplicacoesText.innerText.trim().split("/");
+
+
+            aplicacoesText.forEach(a => aplicacoes.push({
+                montadora,
+                modelo: a,
+            }))
 
             return {
-                montadora: aplicacao[0],
-                modelo: aplicacao[1],
-                ano: aplicacao[4].replaceAll(" ", "").replace(">", "/").replaceAll("-", ""),
-                versao
-            }
-        })
-
-        const imagens = await page.evaluate(() => {
-            return Array.from(document.querySelectorAll('body > main > article > section.detalhes > div > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div > div > div > ul > li > img'))
-                .map(img => img.src)
-        })
-
-
-        const atributos = await page.evaluate(() => {
-            const span = document.querySelector("body > main > article > section.detalhes > div > div:nth-child(2) > div:nth-child(2) > div > div:nth-child(2) > div > p > span");
-            return span ? span.innerText.trim().split("|") : null;
+                linha: linha ? linha.innerText.trim() : null,
+                atributos,
+                aplicacoes
+            };
         });
 
-        const atributosFormatados = atributos.map(item => item.replaceAll(': ', ':').replace(/^\s+|\s+$/g, ""))
+        const imagens = await page.evaluate(() => {
+            return [...document.querySelectorAll("a.lightbox-added")]
+                .map(a => a.href);
+        });
 
         const data = {
+<<<<<<< HEAD
             link: produtos[i].link,
             nome: produtos[i].nome,
             linha,
@@ -64,18 +123,26 @@ const API_URL = 'http://localhost:3001/ds';
             aplicacoes: formataAplicacoes,
             imagens,
             atributos: atributosFormatados
+=======
+            ...produtos[i],
+            ...texts,
+            imagens
+>>>>>>> nafil
         }
-
-        //console.log(data)
-        PUT(data);
+        await POST(data);
     }
 
-    console.log(`Finalizando ${produtos.length} registros.`)
+
     await browser.close();
 })();
 
+<<<<<<< HEAD
 
 export async function POST(data) {
+=======
+async function POST(data) {
+    console.log(data)
+>>>>>>> nafil
 
     try {
         const response = await axios.post(API_URL, data);
@@ -85,6 +152,7 @@ export async function POST(data) {
     }
 
 }
+<<<<<<< HEAD
 export async function PUT(data) {
 
     try {
@@ -128,3 +196,5 @@ async function GET_LINHA(linha) {
         return error
     }
 }
+=======
+>>>>>>> nafil
