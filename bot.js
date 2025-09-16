@@ -1,6 +1,5 @@
-const fs = require("fs")
-const axios = require("axios")
-const puppeteer = require("puppeteer");
+import axios from "axios";
+import puppeteer from "puppeteer";
 
 const API_URL = 'http://localhost:3001/ds';
 
@@ -9,14 +8,14 @@ const API_URL = 'http://localhost:3001/ds';
     const page = await browser.newPage();
     page.setDefaultNavigationTimeout(0);
 
-    const linha = "Sensor de Velocidade (VSS)"
+    const linha = "Diversos"
     const res = await GET_LINHA(linha)
     const produtos = res.data
     const passosTotais = produtos.length
 
 
     for (i = 0; i < passosTotais; i++) {
-        console.log(linha, "passo:", String(Number(i+1) + "/"+passosTotais));
+        console.log(linha, "passo:", String(Number(i + 1) + "/" + passosTotais));
 
         await page.goto(produtos[i].link, { waitUntil: 'load' });
         await page.waitForSelector('body > main > article > section.detalhes > div > div:nth-child(2) > div:nth-child(2) > div > div:nth-child(3) > div > div > table > tbody');
@@ -57,8 +56,10 @@ const API_URL = 'http://localhost:3001/ds';
         const atributosFormatados = atributos.map(item => item.replaceAll(': ', ':').replace(/^\s+|\s+$/g, ""))
 
         const data = {
-            ...produtos[i],
-            //descricao: atributosFormatados[0].split(":")[1],
+            link: produtos[i].link,
+            nome: produtos[i].nome,
+            linha,
+            id: produtos[i].id,
             equivalentes,
             aplicacoes: formataAplicacoes,
             imagens,
@@ -74,7 +75,7 @@ const API_URL = 'http://localhost:3001/ds';
 })();
 
 
-async function POST(data) {
+export async function POST(data) {
 
     try {
         const response = await axios.post(API_URL, data);
@@ -84,7 +85,7 @@ async function POST(data) {
     }
 
 }
-async function PUT(data) {
+export async function PUT(data) {
 
     try {
         const response = (await axios.put(API_URL + "/" + data.id, data));
@@ -95,7 +96,7 @@ async function PUT(data) {
 
 }
 
-async function GETALL() {
+export async function GETALL() {
     try {
         const response = (await axios.get(API_URL));
         return response

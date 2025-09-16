@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -24,45 +23,40 @@ model Catalogo {
 }
 
 model Produto {
-  id            Int         @id @default(autoincrement())
-  linha         String?
-  referencia    String?
-  aplicacoes    String?
+  id         Int     @id @default(autoincrement())
+  linha      String?
+  referencia String?
+  aplicacoes String?
 
-  Catalogo      Catalogo?   @relation(fields: [catalogoId], references: [id])
-  catalogoId    Int?
+  Catalogo   Catalogo? @relation(fields: [catalogoId], references: [id])
+  catalogoId Int?
 
-  equivalencias Equivalencia[]
-  dados         Dado[]
+  equivalencias          Equivalencia[]
+  atributos              Atributo[]
   aplicacoesRelacionadas Aplicacao[]
 }
 
-enum TipoDado {
-  LARGURA
-  ALTURA
-  PROFUNDIDADE
-  PESO
-  VOLUME
-  LITRAGEM
-  ESTRIAS
-  FUROS
-  DIAMETRO
-  COMPRIMENTO
-  ESTRIAS_INTERNA
-  ESTRIAS_EXTERNA
+model TipoAtributo {
+  id       Int        @id @default(autoincrement())
+  nome     String
+  Atributo Atributo[]
 }
 
-model Dado {
-  id        Int      @id @default(autoincrement())
-  tipo      TipoDado
-  valor     String
+model Atributo {
+  id Int @id @default(autoincrement())
+
+  valor String
+
+  tipo   TipoAtributo? @relation(fields: [tipoId], references: [id])
+  tipoId Int?
+
   produto   Produto? @relation(fields: [produtoId], references: [id])
   produtoId Int?
 }
 
 model Aplicacao {
   id          Int      @id @default(autoincrement())
-  modelo      Modelo? @relation(fields: [modeloId], references: [id])
+  modelo      Modelo?  @relation(fields: [modeloId], references: [id])
   modeloId    Int?
   ano         String?
   complemento String?
@@ -72,16 +66,25 @@ model Aplicacao {
 }
 
 model Modelo {
-  id    Int    @id @default(autoincrement())
-  nome  String
-  montadora String
-  aplicacoes  Aplicacao[]
+  id   Int    @id @default(autoincrement())
+  nome String
+
+  montadora   Montadora? @relation(fields: [montadoraId], references: [id])
+  montadoraId Int?
+
+  aplicacoes Aplicacao[]
+}
+
+model Montadora {
+  id      Int      @id @default(autoincrement())
+  nome    String
+  modelos Modelo[]
 }
 
 model Equivalencia {
-  id        Int      @id @default(autoincrement())
-  marca   String?
-  codigo   String
+  id     Int     @id @default(autoincrement())
+  marca  String?
+  codigo String
 
   produto   Produto? @relation(fields: [produtoId], references: [id])
   produtoId Int?
