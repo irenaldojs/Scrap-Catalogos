@@ -22,3 +22,13 @@ export async function PUT(api: string, data: PRODUTO) {
     }
 
 }
+
+export async function GET(api: string) {
+    try {
+        const response = await axios.get(api);
+        //console.log('Dados enviados com sucesso:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Erro ao enviar dados:', error);
+    }
+}

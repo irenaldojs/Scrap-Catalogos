@@ -6,7 +6,8 @@ export type PRODUTO = {
     image?: string,
     aplicacoes?: APLICACAO[],
     atributos?: string[],
-    imagens?: string[]
+    imagens?: string[],
+    equivalentes?: string[]
 }
 
 export type APLICACAO = {
