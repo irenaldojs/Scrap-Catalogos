@@ -1,11 +1,11 @@
 {
   "name": "scrap-catalogos",
   "version": "1.0.0",
-  "main": "index.js",
-  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "bot": "node bot.js",
+    "build": "tsc",
+    "bot": "ts-node src/index.ts",
+    "start": "node dist/index.ts",
     "server": "json-server --watch produtos.json --port 3001"
   },
   "keywords": [],
@@ -23,6 +23,7 @@
     "json-server": "^1.0.0-beta.2",
     "prisma": "^6.16.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "tsx": "^4.20.5"
   }
 }
