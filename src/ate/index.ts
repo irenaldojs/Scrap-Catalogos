@@ -1,3 +1,4 @@
+import { APLICACAO } from './../type/produto';
 
 import puppeteer from "puppeteer";
 import { GET, POST, PUT } from "../service/json-server";
@@ -59,10 +60,10 @@ export async function COMPLETAR_CADASTROS_ATE() {
     const page = await browser.newPage();
     page.setDefaultNavigationTimeout(0);
 
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < PAGINAS; i++) {
         const produto = produtos[i];
         await page.goto(produto.link, { waitUntil: 'load' })
-        console.log(produto.id)
+        console.log(produto.id, produto.link)
 
         const atributos = await page.evaluate(() => {
             const SELETOR = "#container-campos-produto div";
@@ -121,39 +122,23 @@ export async function COMPLETAR_CADASTROS_ATE() {
             }).filter(Boolean);
         })
 
-        const aplicacoes = await page.evaluate(() => {
+        const aplicacoes = await page.$$eval('div.scroll-detalhes-produto > table > tbody', tbodies => {
+            // tbodies é array de elementos <tbody>
+            return tbodies.map(tbody => {
+                // para cada tbody, você pode extrair o que quiser. Ex: todas as linhas e colunas.
+                if (tbody.id == "cw-fabricante-aplicacao") return;
 
-            const SELETOR = "#cw-container-fabricante-aplicacao-produto .scroll-detalhes-produto table tbody";
+                const montadora = tbody.querySelector('th.tituloMontadora')?.textContent?.trim();
 
-            return Array.from(document.querySelectorAll(SELETOR)).map(tbody => {
+                const rows = Array.from(tbody.querySelectorAll('tr')).map(tr => {
+                    const cols = Array.from(tr.querySelectorAll('td'));
+                    return cols.map(td => td.innerText.trim()).filter(Boolean).filter(col => col !== "- -");
+                }).filter(row => row.length > 0);
 
-                const montadoraEl = tbody.firstChild
-                const montadora = montadoraEl ? montadoraEl.textContent?.trim() : null;
+                return rows.map(row => Object({ montadora, modelo: row[0], versao: row[1], ano: row[2] }))
 
-                const modelosEL = tbody.querySelectorAll(".ideia-linha-aplicacao tr");
-
-                const modelos = Array.from(modelosEL).map(tr => {
-                    const modeloEl = tr.querySelector(".cw-descricao-aplicacao")
-                    const modelo = modeloEl ? modeloEl.textContent?.trim() : null;
-
-                    const versaoEl = tr.querySelector("#cw-produto-aplicacao-complementoaplicacao")
-                    const versao = versaoEl ? versaoEl.textContent?.trim() : null;
-
-                    const anoEl = tr.querySelector("#cw-produto-aplicacao-complementoaplicacao2")
-                    const ano = anoEl ? anoEl.textContent?.trim() : null;
-
-                    return {
-                        montadora,
-                        modelo,
-                        ano,
-                        versao
-                    }
-                })
-
-                return [...modelos]
-
-            }).filter(Boolean);
-        })
+            }).filter(Boolean)[0];
+        });
 
         const data = {
             ...produto,
@@ -163,8 +148,8 @@ export async function COMPLETAR_CADASTROS_ATE() {
             aplicacoes
         }
 
-        console.log(aplicacoes)
-        //await PUT(API_URL, data as PRODUTO)
+        //console.log(data)
+        await PUT(API_URL, data as PRODUTO)
     }
     await browser.close();
 }
