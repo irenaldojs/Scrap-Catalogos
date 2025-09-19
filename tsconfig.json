@@ -4,9 +4,9 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
+    "forceConsistentCasingInFileNames": false,
     "strict": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "outDir": "./dist"
   },
   "include": [
