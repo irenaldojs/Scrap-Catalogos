@@ -1,7 +1,7 @@
 import puppeteer from "puppeteer";
 import { API_URL } from "..";
 import { GET, POST, POST_AUX, PUT } from "../service/json-server";
-import { PRODUTO } from "../type/produto";
+import { APLICACAO, PRODUTO } from "../type/produto";
 
 const CATALOGO_URL = "https://www.c123.com.br/bastos/index.asp"
 const PAGINAS = 0
@@ -12,13 +12,16 @@ type CT_BAS = {
 }
 
 export async function FORMATAR_CATEGORIAS_BASTOS() {
-    const categorias: CT_BAS[] = await GET(API_URL + "bastos_categorias")
+    const categorias: CT_BAS[] = await GET(API_URL + "bastos_categorias" + "/1364")
 
     const categorias_format = categorias.map(categoria => {
-        const nome = categoria.nome.replace("JTA", "JUNTA")
+        const nome = categoria.nome
+        //.replace("JTA", "JUNTA").replace("JG MTR", "JG JUNTA MOTOR")
+
         return {
             ...categoria,
-            nome
+            linha: "anel sensor temperatura",
+            "referencia_replace": "ANEL SENSOR TEMPERATURA DAGUA"
         }
     })
     console.log(categorias_format)
@@ -54,47 +57,81 @@ export async function LISTA_CATEGORIAS_BASTOS() {
     await browser.close();
 }
 
-export async function LISTA_PRODUTOS_ATE() {
-
+export async function POST_BASTOS() {
+    const categoria_cod = 1364;
+    const BASTOS_URL_CAT = 'https://www.c123.com.br/bastos/res.asp?s='+ categoria_cod
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     page.setDefaultNavigationTimeout(0);
 
-    for (let i = 1; i < PAGINAS; i++) {
-        console.log("PAGINA: ", i)
-        await page.goto(CATALOGO_URL + i, { waitUntil: 'load' })
+    await page.goto(BASTOS_URL_CAT, { waitUntil: 'load' })
 
-        const items = await page.evaluate(() => {
-            const SELETOR = "#cw-lista a.caixaProdutoHome"
-            return Array.from(document.querySelectorAll(SELETOR)).map(a => {
-                if (!(a instanceof HTMLAnchorElement)) return null;
+    await page.waitForSelector("#tabgrid");
 
-                // procura o id dentro do <a>
-                const idEl = a.querySelector("#cw-numero-produto");
-                const id = idEl ? idEl.textContent?.trim() : null;
+    const items = await page.evaluate(() => {
+        const seletor = "#tabgrid tbody"
 
-                if (!id) return null;
+        const tbody = document.querySelector(seletor)
 
-                const linhaEl = a.querySelector(".descricaoProduto")
-                const linha = linhaEl ? linhaEl.textContent?.trim() : null;
+        const rows = tbody && Array.from(tbody?.querySelectorAll("tr")).map(
+                 tr => {
+                    const replace = "ANEL SENSOR TEMPERATURA DAGUA"
+                    const data: PRODUTO = { linha: replace }   
+                    Array.from( tr.querySelectorAll("td.bbl")).forEach(
+                        (td, index) => {    
+                        const text = td.textContent.trim()
 
-                if (!linha) return null;
+                        if(index == 0)data.id = text
+                        if(index == 1)data.referencia = text.replace(replace, "")                        
+                    })
+                    const row = document.querySelector("#"+tr.id)
+                    if(row instanceof HTMLTableRowElement) row.click();
 
-                const imagemEl = a.querySelector(".fotoProdutoHome img")
-                const imagem = imagemEl instanceof HTMLImageElement ? imagemEl.src : null;
+                    const equivalentes = Array.from(document.querySelectorAll("#objCon1 table tbody tr")).map(tr => tr.textContent.trim())
+                    data.equivalentes = equivalentes
 
-                return {
-                    id,
-                    linha,
-                    link: a.href,
-                    imagem
-                };
-            }).filter(Boolean);
-        })
+                    let montadora = ""
 
-        items.forEach(async (item) => PUT(API_URL, item as PRODUTO))
-    }
+                    const aplicacoes = Array.from(document.querySelectorAll("#tabAplic tbody tr")).map(
+                        tr => {
+                            
+                        const isMontadora = tr.querySelector("[style='color:#3D5F08;']")?.textContent.trim()
+                        
+                        if(isMontadora){
+                            montadora = isMontadora;
+                            return;
+                        }
 
+                        let aplicacao: APLICACAO = { montadora }
+                        
+                        const tds = Array.from(tr.querySelectorAll("td"))
+                        const modelo = tds[0] && tds[0].textContent?.trim()
+                        const ano = tds[1] && tds[1].textContent?.trim()
+                        const versao = tds[3] && tds[2] && tds[3].textContent?.trim() + " " + tds[2].textContent?.trim()                            
 
-    await browser.close();
+                        aplicacao.modelo = modelo
+                        aplicacao.montadora = montadora
+                        aplicacao.ano = ano
+                        aplicacao.versao = versao
+
+                        return {...aplicacao}
+                        }
+                    ).filter(Boolean).filter(item => item?.modelo !== "" && item?.modelo !== montadora) as APLICACAO[]
+
+                    data.aplicacoes = aplicacoes
+                    data.link = "https://www.c123.com.br/bastos/res.asp?n=" + data.id
+                    
+                    const image = `https://www.c123.com.br/bastos/FotoRetArq.asp?a=${data.id}%2Ejpg`
+                    data.image = image
+
+                if(data.id !== "")return data
+            }
+        ).filter(Boolean)
+        
+        return rows
+    })
+
+    items?.forEach(item => console.log(item))
+
+    browser.close()
 }
